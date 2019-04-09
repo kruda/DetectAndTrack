@@ -4,6 +4,7 @@
 import os
 import os.path as osp
 import sys
+import tqdm
 
 import numpy as np
 import pickle
@@ -68,13 +69,15 @@ def _read_video(args):
     os.makedirs(temp_frame_folder)
     count = 1
     idx = 0
-    while success:
-        if idx % 2 == 0: # reduce fps by two times
-            image = cv2.resize(image, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
-            cv2.imwrite(osp.join(temp_frame_folder,'%08d.jpg' % count), image)     # save frame as JPEG file
-            count += 1
-        success, image = vidcap.read()
-        idx += 1
+    with tqdm.tqdm() as indicator:
+        while success:
+            if idx % 2 == 0: # reduce fps by two times
+                image = cv2.resize(image, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
+                cv2.imwrite(osp.join(temp_frame_folder,'%08d.jpg' % count), image)     # save frame as JPEG file
+                count += 1
+            success, image = vidcap.read()
+            idx += 1
+            indicator.update(1)
     return count-1
 
 def _read_video_frames(out_path, vid_name, index):
@@ -269,7 +272,7 @@ def main(name_scope, gpu_dev, num_images, args):
     all_boxes, all_segms, all_keyps = empty_results(num_classes, num_images)
 
     if '2d_best' in args.cfg_file:
-        for i in range(num_images):
+        for i in tqdm.tqdm(range(num_images)):
             print('Processing Detection for Frame %d'%(i+1))
             im_ = _read_video_frames(args.out_path, args.vid_name, i)
             im_ = np.expand_dims(im_, 0)
@@ -364,7 +367,7 @@ def main(name_scope, gpu_dev, num_images, args):
     dets_withTracks = compute_matches_tracks(frames, dets, lstm_model)
     _write_det_file(dets_withTracks, out_detrack_file)
 
-    for i in range(num_images):
+    for i in tqdm.tqdm(range(num_images)):
         vis_im = _generate_visualizations(frames[i], i, dets['all_boxes'], dets['all_keyps'], dets['all_tracks'])
         cv2.imwrite(osp.join(args.out_path, args.vid_name + '_vis','%08d.jpg'%(i+1)),vis_im)
 
