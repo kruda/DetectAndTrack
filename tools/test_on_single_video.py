@@ -61,16 +61,20 @@ def parse_args():
 def _read_video(args):
     vidcap = cv2.VideoCapture(args.video_path)
     success,image = vidcap.read()
-    count = 1
     success = True
     temp_frame_folder = osp.join(args.out_path,args.vid_name + '_frames/')
     if os.path.exists(temp_frame_folder):
       shutil.rmtree(temp_frame_folder)
     os.makedirs(temp_frame_folder)
+    count = 1
+    idx = 0
     while success:
-        cv2.imwrite(osp.join(temp_frame_folder,'%08d.jpg' % count), image)     # save frame as JPEG file
-        success,image = vidcap.read()
-        count += 1
+        if idx % 2 == 0: # reduce fps by two times
+            image = cv2.resize(image, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
+            cv2.imwrite(osp.join(temp_frame_folder,'%08d.jpg' % count), image)     # save frame as JPEG file
+            count += 1
+        success, image = vidcap.read()
+        idx += 1
     return count-1
 
 def _read_video_frames(out_path, vid_name, index):
